@@ -1,0 +1,28 @@
+{
+    "author": "chs5056@me.com",
+    "dependencies": {},
+    "keywords": [],
+    "name": "hello-world-4",
+    "pebble": {
+        "displayName": "Hello World 4",
+        "enableMultiJS": false,
+        "messageKeys": [
+            "hello_msg"
+        ],
+        "projectType": "native",
+        "resources": {
+            "media": []
+        },
+        "sdkVersion": "3",
+        "targetPlatforms": [
+            "aplite",
+            "basalt",
+            "chalk"
+        ],
+        "uuid": "5fa57d80-7bbe-49f8-a254-6759d18ada22",
+        "watchapp": {
+            "watchface": false
+        }
+    },
+    "version": "1.0.0"
+}
