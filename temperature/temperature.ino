@@ -116,36 +116,41 @@ void loop()
   
   while (1)
   {
+    // determine a request from watch
+    if(Serial.available()>0)
+    {
+        char buffer[256];
+        Serial.readBytes(buffer, 256);
+        printf("%s",buffer); 
+//        Serial.println(buffer); 
+//         Serial.println("test"); 
+        
+        if(buffer[0] == 'q')
+        {
+            digitalWrite(BLUE, HIGH);
+        }
+        
+        memset(buffer, 0, 1); 
+        delay(2000); 
+    }
+
     Wire.requestFrom(THERM, 2);
     Temperature_H = Wire.read();
     Temperature_L = Wire.read();
     
     /* Calculate temperature */
     Cal_temp (Decimal, Temperature_H, Temperature_L, IsPositive);
-
-     if(Serial.available()>0)
-    {
-        char buffer[256];
-        Serial.readBytes(buffer, 256);
-//        Serial.print("test"); 
-        
-        if(buffer[0] == '1')
-        {
-            digitalWrite(BLUE, HIGH);
-        }
-    }
     
     /* Display temperature on the serial monitor. 
        Comment out this line if you don't use serial monitor.*/
     SerialMonitorPrint (Temperature_H, Decimal, IsPositive);
-
-   
     
     /* Update RGB LED.*/
 //    UpdateRGB (Temperature_H);
     
     /* Display temperature on the 7-Segment */
     Dis_7SEG (Decimal, Temperature_H, Temperature_L, IsPositive);
+//    Serial.flush(); 
     
     delay (1000);        /* Take temperature read every 1 second */
   }
