@@ -31,11 +31,12 @@ void configure(int fd) {
 // Global variables for the temperature
 string temperature;
 string units;
+string filename;
+int fd;
 
 
 void* get_temp(void*);
-
-
+void write_to_device(string);
 
 int start_server(int PORT_NUMBER)
 {
@@ -124,7 +125,7 @@ exit(1);
 
 
 					// Change the units on the audrino here
-					
+					write_to_device("1");
 					
 					// Then respond with the new temperature
 					
@@ -174,27 +175,6 @@ exit(1);
 
 
 void* get_temp(void* p){
-	// get the name from the command line
-  char* file_name = (char*)p;
-  
-	cout << "Attempting to open " << file_name << " for reading/writing" << endl;
-	
-  // try to open the file for reading and writing
-  int fd = open(file_name, O_RDWR | O_NOCTTY | O_NDELAY);
-  
-  if (fd < 0) {
-    perror("Could not open file");
-    exit(1);
-  }
-  else {
-    cout << "Successfully opened " << file_name << " for reading/writing" << endl;
-  }
-
-  configure(fd);
-
-  /*
-    Write the rest of the program below, using the read and write system calls.
-  */
 
   int size = 20;
   char buf[size];
@@ -233,6 +213,13 @@ void* get_temp(void* p){
 		return p;
 }
 
+void write_to_device(string message){
+  
+  cout << "Writing " << message << " to the device" << endl;
+  int w = write(fd, message.c_str(), message.length());
+  cout << "Result: " << w << endl;
+}
+
 
 
 int main(int argc, char *argv[]) {
@@ -242,16 +229,39 @@ int main(int argc, char *argv[]) {
     cout << "Usage: [serial port (USB) device file] [port number]" << endl;
     exit(0);
   }
+  
+  
+  
+  char* file_name = argv[1];
+  
+	cout << "Attempting to open " << file_name << " for reading/writing" << endl;
+	
+  // try to open the file for reading and writing
+  fd = open(file_name, O_RDWR | O_NOCTTY | O_NDELAY);
+  
+  if (fd < 0) {
+    perror("Could not open file");
+    exit(1);
+  }
+  else {
+    cout << "Successfully opened " << file_name << " for reading/writing" << endl;
+  }
+
+  configure(fd);
+  
 	
 	char* a = argv[1];
+  filename = argv[1];
 	int r = 0;
 	pthread_t t1;
+  
+  /*
 	r = pthread_create(&t1, NULL, &get_temp, a);
 	
 	if(r != 0){
     // Thread was not successful!
   }
-	
+	*/
 	
 	// Start the server
 	int PORT_NUMBER = atoi(argv[2]);
