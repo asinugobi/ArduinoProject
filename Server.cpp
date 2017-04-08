@@ -214,9 +214,9 @@ void* get_temp(void* p){
 }
 
 void write_to_device(string message){
-  
+  char* a = "q";
   cout << "Writing " << message << " to the device" << endl;
-  int w = write(fd, message.c_str(), message.length());
+  int w = write(fd, a, 1);
   cout << "Result: " << w << endl;
 }
 
