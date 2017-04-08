@@ -48,6 +48,9 @@ void UpdateRGB (byte);
  Purpose: 
    Initialize hardwares.
 ****************************************************************************/
+#include <LiquidCrystal.h>
+
+//LiquidCrystal lcd(12, 11, 10, 5, 4, 3, 2); 
 
 void setup() 
 { 
@@ -55,7 +58,7 @@ void setup()
   Wire.begin();        /* Join I2C bus */
   pinMode(RED, OUTPUT);    
   pinMode(GREEN, OUTPUT);  
-  pinMode(BLUE, OUTPUT);   
+  pinMode(BLUE, OUTPUT);  
   delay(500);          /* Allow system to stabilize */
 } 
 
@@ -119,13 +122,27 @@ void loop()
     
     /* Calculate temperature */
     Cal_temp (Decimal, Temperature_H, Temperature_L, IsPositive);
+
+     if(Serial.available()>0)
+    {
+        char buffer[256];
+        Serial.readBytes(buffer, 256);
+//        Serial.print("test"); 
+        
+        if(buffer[0] == '1')
+        {
+            digitalWrite(BLUE, HIGH);
+        }
+    }
     
     /* Display temperature on the serial monitor. 
        Comment out this line if you don't use serial monitor.*/
     SerialMonitorPrint (Temperature_H, Decimal, IsPositive);
+
+   
     
     /* Update RGB LED.*/
-    UpdateRGB (Temperature_H);
+//    UpdateRGB (Temperature_H);
     
     /* Display temperature on the 7-Segment */
     Dis_7SEG (Decimal, Temperature_H, Temperature_L, IsPositive);
