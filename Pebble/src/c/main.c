@@ -4,6 +4,10 @@ static Window *window;
 static TextLayer *hello_layer;
 static char msg[100];
 
+enum {
+  MESSAGE = 0
+};
+
 void out_sent_handler(DictionaryIterator *sent, void *context) { 
   // outgoing message was delivered -- do nothing
 }
@@ -11,6 +15,7 @@ void out_failed_handler(DictionaryIterator *failed, AppMessageResult reason, voi
   // outgoing message failed
   text_layer_set_text(hello_layer, "Error out!");
 }
+  
 
 void in_received_handler(DictionaryIterator *received, void *context) {
   // incoming message received
@@ -37,18 +42,28 @@ void in_dropped_handler(AppMessageResult reason, void *context) {
 /* This is called when the select button is clicked */
 void select_click_handler(ClickRecognizerRef recognizer, void *context) {
   text_layer_set_text(hello_layer, "Selected!"); 
+  
   DictionaryIterator *iter;
   app_message_outbox_begin(&iter);
-  int key = 0;
-  // send the message "hello?" to the phone, using key #0
-  Tuplet value = TupletCString(key, "hello?"); 
-  dict_write_tuplet(iter, &value); 
+  dict_write_cstring (iter, MESSAGE, "getTemp");
+  app_message_outbox_send();
+}
+
+/* This is called when the bottom button is clicked */
+void down_click_handler(ClickRecognizerRef recognizer, void *context) {
+  text_layer_set_text(hello_layer, "Selected!"); 
+  
+  
+  DictionaryIterator *iter;
+  app_message_outbox_begin(&iter);
+  dict_write_cstring (iter, MESSAGE, "changeUnits");
   app_message_outbox_send();
 }
 
 /* this registers the appropriate function to the appropriate button */
 void config_provider(void *context) {
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
+  window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
 }
 
 static void window_load(Window *window) {
@@ -58,7 +73,7 @@ static void window_load(Window *window) {
     .origin = { 0, 72 },
     .size = { bounds.size.w, 20 } 
   }); 
-  text_layer_set_text(hello_layer, "Hello world!"); 
+  text_layer_set_text(hello_layer, "Welcome to Temp Reader"); 
   text_layer_set_text_alignment(hello_layer, GTextAlignmentCenter); 
   layer_add_child(window_layer, text_layer_get_layer(hello_layer));
 }
@@ -98,4 +113,4 @@ int main(void) {
   init();
   app_event_loop();
   deinit();
-}
+	}

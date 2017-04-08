@@ -24,6 +24,9 @@ void configure(int fd) {
   tcsetattr(fd, TCSANOW, &pts);
 }
 
+string temperature;
+string units;
+
 
 int main(int argc, char *argv[]) {
 
@@ -60,22 +63,30 @@ int main(int argc, char *argv[]) {
   int pos = 0; 
 
   while((n = read(fd,buf,size))){
-    
-    if(n < 1)
-      continue; 
-    
-    pos = line.find('\n'); 
-    if(pos != string::npos){
-      cout << "new temp: " << endl; 
-      // cout << line.substr(0) << endl;
-      cout << line.substr(0,pos+1) << endl;
-      temp = line.substr(pos+1);
-      line.clear(); 
-      line = temp; 
-    }
-    line.append(buf);
-    // line += buf; 
-    memset(buf, 0, size);
+      if(n < 1){
+          continue;
+      }
+      
+      line.append(buf);
+      
+      pos = line.find('\n');
+      if(pos != string::npos){
+          
+          temp = line.substr(0, pos);
+          
+          int left_side = temp.find("The temperature is ");
+          int right_side = temp.find(" degrees");
+          if(left_side != string::npos && right_side != string::npos){
+              temperature = temp.substr(19, (right_side - 19));
+              units = temp.substr((right_side + 9), 1);
+              cout << "The weather is: '" << temperature << "' in '" << units << "'" << endl;
+          }
+          line.clear();
+          memset(buf, 0, size);
+      } else {
+          
+      }
+      
   }
   
 }
