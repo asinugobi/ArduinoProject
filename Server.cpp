@@ -255,13 +255,13 @@ int main(int argc, char *argv[]) {
 	int r = 0;
 	pthread_t t1;
   
-  /*
+  
 	r = pthread_create(&t1, NULL, &get_temp, a);
 	
 	if(r != 0){
     // Thread was not successful!
   }
-	*/
+	
 	
 	// Start the server
 	int PORT_NUMBER = atoi(argv[2]);
