@@ -37,7 +37,7 @@ const byte NumberLookup[16] =   {0x3F,0x06,0x5B,0x4F,0x66,
 
 /* Function prototypes */
 void Cal_temp (int&, byte&, byte&, bool&);
-void Dis_7SEG (int, byte, byte, bool);
+void Dis_7SEG (int, byte, byte, bool, bool);
 void Send7SEG (byte, byte);
 void SerialMonitorPrint (byte, int, bool);
 void UpdateRGB (byte);
@@ -74,6 +74,8 @@ void loop()
   int Decimal;
   byte Temperature_H, Temperature_L, counter, counter2;
   bool IsPositive;
+  double temp_fahrenheit;
+  bool blue_on = false;
   
   /* Configure 7-Segment to 12mA segment output current, Dynamic mode, 
      and Digits 1, 2, 3 AND 4 are NOT blanked */
@@ -128,6 +130,8 @@ void loop()
         if(buffer[0] == 'q')
         {
             digitalWrite(BLUE, HIGH);
+            SerialMonitorPrint (Temperature_H, Decimal, IsPositive);
+            blue_on = true;
         }
         
         memset(buffer, 0, 1); 
@@ -137,19 +141,31 @@ void loop()
     Wire.requestFrom(THERM, 2);
     Temperature_H = Wire.read();
     Temperature_L = Wire.read();
+
+    //Serial.print(Decimal); Serial.print(", "); Serial.print(Temperature_L); Serial.print(", "); Serial.println(Temperature_H);
+
+    if(blue_on == true){
+      
+      temp_fahrenheit = (Temperature_H + 0.0001 * Decimal) * 1.8 + 32;
+      Temperature_H = (int)temp_fahrenheit;
+      Decimal = (temp_fahrenheit - Temperature_H) * 1000;
+      //Serial.print(Decimal); Serial.print(", "); Serial.print(temp_fahrenheit); Serial.print(", "); Serial.println(Temperature_H);
+      //Dis_7SEG (Decimal, Temperature_H, Temperature_L, IsPositive);
+    }
     
     /* Calculate temperature */
     Cal_temp (Decimal, Temperature_H, Temperature_L, IsPositive);
     
     /* Display temperature on the serial monitor. 
        Comment out this line if you don't use serial monitor.*/
+    
     SerialMonitorPrint (Temperature_H, Decimal, IsPositive);
     
     /* Update RGB LED.*/
 //    UpdateRGB (Temperature_H);
     
     /* Display temperature on the 7-Segment */
-    Dis_7SEG (Decimal, Temperature_H, Temperature_L, IsPositive);
+    Dis_7SEG (Decimal, Temperature_H, Temperature_L, IsPositive, !blue_on);
 //    Serial.flush(); 
     
     delay (1000);        /* Take temperature read every 1 second */
@@ -188,7 +204,7 @@ void Cal_temp (int& Decimal, byte& High, byte& Low, bool& sign)
  Purpose: 
    Display number on the 7-segment display.
 ****************************************************************************/
-void Dis_7SEG (int Decimal, byte High, byte Low, bool sign)
+void Dis_7SEG (int Decimal, byte High, byte Low, bool sign, bool celcius)
 {
   byte Digit = 4;                 /* Number of 7-Segment digit */
   byte Number;                    /* Temporary variable hold the number to display */
@@ -233,7 +249,13 @@ void Dis_7SEG (int Decimal, byte High, byte Low, bool sign)
 
   if (Digit > 0)                 /* Display "c" if there is more space on 7-SEG */
   {
-    Send7SEG (Digit,0x58);
+    if(celcius){
+      //Send7SEG (Digit,0x58);
+      Send7SEG (Digit,0x58);
+    } else {
+      Send7SEG (Digit,0x71);
+    }
+    
     Digit--;
   }
   
