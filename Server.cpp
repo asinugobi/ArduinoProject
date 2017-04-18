@@ -33,7 +33,9 @@ string temperature;
 string units;
 string filename;
 int fd;
-
+bool celcius = true;
+bool fahrenheit = false;
+bool stand_by = true;
 
 void* get_temp(void*);
 void write_to_device(string);
@@ -78,17 +80,12 @@ exit(1);
     // once you get here, the server is set up and about to start listening
     cout << endl << "Server configured to listen on port " << PORT_NUMBER << endl;
     fflush(stdout);
-   
-		
-		
-		int continue_serving_clients = 1;
-		while(continue_serving_clients > 0){
+   	
+	int continue_serving_clients = 1;
+
+		while(continue_serving_clients > 0){	
 			
-			
-			
-			
-			
-			// 4. accept: wait here until we get a connection on that port
+		// 4. accept: wait here until we get a connection on that port
 	    int sin_size = sizeof(struct sockaddr_in);
 	    int fd = accept(sock, (struct sockaddr *)&client_addr,(socklen_t *)&sin_size);
 	    cout << "Server got a connection from " << inet_ntoa(client_addr.sin_addr) << ":" << ntohs(client_addr.sin_port) << endl;
@@ -103,12 +100,12 @@ exit(1);
 	    // cout << "Here comes the message:" << endl;
 	    // cout << request << endl;
 	
-			string reply;
+		string reply;
 	    
-			// Parse GET Response
-			string request_string = request;
-			int request_start = request_string.find('/');
-      if(request_start != string::npos){
+		// Parse GET Response
+		string request_string = request;
+		int request_start = request_string.find('/');
+      	if(request_start != string::npos){
 				int request_end = request_string.substr(request_start, request_string.length() - request_start).find(' ');
 				
 				string request_action = request_string.substr(request_start + 1, request_end);
@@ -116,27 +113,51 @@ exit(1);
 				cout << "Request Action: " << request_action << endl;
 				
 				
+		
 				if(request_action.find("getTemp") != string::npos){
 					// Return the temperature
 					reply = "{\n\"response_type\":\"getTemp\",\n\"temperature\": \"" + temperature + "\",\n\"units\":\"" + units + "\"\n}";
-				} else if(request_action.find("changeUnits") != string::npos){
+					stand_by = false;
+					if(celcius)
+						write_to_device("c");
+					else
+						write_to_device("f");
+				}
+				else if(request_action.find("StandBy") != string::npos || stand_by == true){
+					stand_by = true;
+					reply = "{\n\"response_type\":\"StandBy\",\n\"Currently in Standby mode\": \"";
+					write_to_device("s");
+				} 
+				else if(request_action.find("changeUnits") != string::npos){
 					// Placeholder
-					reply = "{\n\"response_type\":\"changeUnits\"\n}";
+					if(stand_by == true){
+						reply = "{\n\"response_type\":\"StandBy\",\n\"First press middle button to get to temperature mode\": \"";
+						write_to_device("s");
+					}
+					else{
+						reply = "{\n\"response_type\":\"changeUnits\"\n}";
 
+						celcius = !celcius;
+						fahrenheit = !fahrenheit;
 
-					// Change the units on the audrino here
-					write_to_device("1");
-					
+						// Change to fahrenheit
+						if(celcius)
+							write_to_device("c");
+						else
+							write_to_device("f");
+					}
 					// Then respond with the new temperature
 					
 					
-				} else {
+				} 
+				else {
 					// Unknown response
 					reply = "{\n\"response_type\":\"unknown\"\n}";
 				}
-      } else {
-				// Could not parse request
-				reply = "{\n\"response_type\":\"request_error\"\n}";
+      } 
+      else {
+      	// Could not parse request
+      	reply = "{\n\"response_type\":\"request_error\"\n}";
       }
 			
 			
@@ -150,14 +171,12 @@ exit(1);
 	    */
 	    
 	    
-			cout << "Reply: '" << reply << "'" << endl;
+		cout << "Reply: '" << reply << "'" << endl;
 			
 	    // 6. send: send the message over the socket
 	    // note that the second argument is a char*, and the third is the number of chars
 	    int s = send(fd, reply.c_str(), reply.length(), 0);
-			
-			
-			
+		
 			
 	    // 7. close: close the socket connection
 	    close(fd);
@@ -214,7 +233,14 @@ void* get_temp(void* p){
 }
 
 void write_to_device(string message){
-  char* a = "q";
+	char* a;
+  if(message == "c")
+  	a = "c";
+  else if(message == "f")
+  	a = "f";
+  else
+  	a = "s";
+
   cout << "Writing " << message << " to the device" << endl;
   int w = write(fd, a, 1);
   cout << "Result: " << w << endl;

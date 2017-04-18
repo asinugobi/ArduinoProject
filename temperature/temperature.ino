@@ -37,9 +37,9 @@ const byte NumberLookup[16] =   {0x3F,0x06,0x5B,0x4F,0x66,
 
 /* Function prototypes */
 void Cal_temp (int&, byte&, byte&, bool&);
-void Dis_7SEG (int, byte, byte, bool, bool);
+void Dis_7SEG (int, byte, byte, bool, bool, bool);
 void Send7SEG (byte, byte);
-void SerialMonitorPrint (byte, int, bool);
+void SerialMonitorPrint (byte, int, bool, bool);
 void UpdateRGB (byte);
 
 /***************************************************************************
@@ -75,7 +75,8 @@ void loop()
   byte Temperature_H, Temperature_L, counter, counter2;
   bool IsPositive;
   double temp_fahrenheit;
-  bool blue_on = false;
+  static bool blue_on = false;
+  static bool stand_by = true;
   
   /* Configure 7-Segment to 12mA segment output current, Dynamic mode, 
      and Digits 1, 2, 3 AND 4 are NOT blanked */
@@ -127,11 +128,22 @@ void loop()
 //        Serial.println(buffer); 
 //         Serial.println("test"); 
         
-        if(buffer[0] == 'q')
+        if(buffer[0] == 'f')
         {
             digitalWrite(BLUE, HIGH);
-            SerialMonitorPrint (Temperature_H, Decimal, IsPositive);
             blue_on = true;
+            SerialMonitorPrint (Temperature_H, Decimal, IsPositive, blue_on);
+        }
+        else if(buffer[0] == 'c'){
+          digitalWrite(BLUE, LOW);
+          blue_on = false;
+          stand_by = false;
+          SerialMonitorPrint (Temperature_H, Decimal, IsPositive, blue_on);
+        }
+        else{
+          digitalWrite(BLUE, LOW);
+          stand_by = true;
+          SerialMonitorPrint(Temperature_H, Decimal, IsPositive, blue_on);
         }
         
         memset(buffer, 0, 1); 
@@ -142,15 +154,11 @@ void loop()
     Temperature_H = Wire.read();
     Temperature_L = Wire.read();
 
-    //Serial.print(Decimal); Serial.print(", "); Serial.print(Temperature_L); Serial.print(", "); Serial.println(Temperature_H);
-
     if(blue_on == true){
       
       temp_fahrenheit = (Temperature_H + 0.0001 * Decimal) * 1.8 + 32;
       Temperature_H = (int)temp_fahrenheit;
       Decimal = (temp_fahrenheit - Temperature_H) * 1000;
-      //Serial.print(Decimal); Serial.print(", "); Serial.print(temp_fahrenheit); Serial.print(", "); Serial.println(Temperature_H);
-      //Dis_7SEG (Decimal, Temperature_H, Temperature_L, IsPositive);
     }
     
     /* Calculate temperature */
@@ -159,13 +167,13 @@ void loop()
     /* Display temperature on the serial monitor. 
        Comment out this line if you don't use serial monitor.*/
     
-    SerialMonitorPrint (Temperature_H, Decimal, IsPositive);
+    SerialMonitorPrint (Temperature_H, Decimal, IsPositive, blue_on);
     
     /* Update RGB LED.*/
 //    UpdateRGB (Temperature_H);
     
     /* Display temperature on the 7-Segment */
-    Dis_7SEG (Decimal, Temperature_H, Temperature_L, IsPositive, !blue_on);
+    Dis_7SEG (Decimal, Temperature_H, Temperature_L, IsPositive, !blue_on, stand_by);
 //    Serial.flush(); 
     
     delay (1000);        /* Take temperature read every 1 second */
@@ -204,59 +212,71 @@ void Cal_temp (int& Decimal, byte& High, byte& Low, bool& sign)
  Purpose: 
    Display number on the 7-segment display.
 ****************************************************************************/
-void Dis_7SEG (int Decimal, byte High, byte Low, bool sign, bool celcius)
+void Dis_7SEG (int Decimal, byte High, byte Low, bool sign, bool celcius, bool stand_by)
 {
   byte Digit = 4;                 /* Number of 7-Segment digit */
   byte Number;                    /* Temporary variable hold the number to display */
-  
-  if (sign == 0)                  /* When the temperature is negative */
-  {
-    Send7SEG(Digit,0x40);         /* Display "-" sign */
-    Digit--;                      /* Decrement number of digit */
-  }
-  
-  if (High > 99)                  /* When the temperature is three digits long */
-  {
-    Number = High / 100;          /* Get the hundredth digit */
-    Send7SEG (Digit,NumberLookup[Number]);     /* Display on the 7-Segment */
-    High = High % 100;            /* Remove the hundredth digit from the TempHi */
-    Digit--;                      /* Subtract 1 digit */    
-  }
-  
-  if (High > 9)
-  {
-    Number = High / 10;           /* Get the tenth digit */
-    Send7SEG (Digit,NumberLookup[Number]);     /* Display on the 7-Segment */
-    High = High % 10;            /* Remove the tenth digit from the TempHi */
-    Digit--;                      /* Subtract 1 digit */
-  }
-  
-  Number = High;                  /* Display the last digit */
-  Number = NumberLookup [Number]; 
-  if (Digit > 1)                  /* Display "." if it is not the last digit on 7-SEG */
-  {
-    Number = Number | B10000000;
-  }
-  Send7SEG (Digit,Number);  
-  Digit--;                        /* Subtract 1 digit */
-  
-  if (Digit > 0)                  /* Display decimal point if there is more space on 7-SEG */
-  {
-    Number = Decimal / 1000;
-    Send7SEG (Digit,NumberLookup[Number]);
-    Digit--;
-  }
 
-  if (Digit > 0)                 /* Display "c" if there is more space on 7-SEG */
-  {
-    if(celcius){
-      //Send7SEG (Digit,0x58);
-      Send7SEG (Digit,0x58);
-    } else {
-      Send7SEG (Digit,0x71);
-    }
-    
+  if(stand_by == true){
+    Send7SEG(Digit, 0x40);
     Digit--;
+    Send7SEG(Digit, 0x40);
+    Digit--;
+    Send7SEG(Digit, 0x40);
+    Digit--;
+    Send7SEG(Digit, 0x40);
+    Digit--;
+  }
+  else{
+    if (sign == 0)                  /* When the temperature is negative */
+    {
+      Send7SEG(Digit,0x40);         /* Display "-" sign */
+      Digit--;                      /* Decrement number of digit */
+    }
+  
+    if (High > 99)                  /* When the temperature is three digits long */
+    {
+      Number = High / 100;          /* Get the hundredth digit */
+      Send7SEG (Digit,NumberLookup[Number]);     /* Display on the 7-Segment */
+      High = High % 100;            /* Remove the hundredth digit from the TempHi */
+      Digit--;                      /* Subtract 1 digit */    
+    }
+  
+    if (High > 9)
+    {
+      Number = High / 10;           /* Get the tenth digit */
+      Send7SEG (Digit,NumberLookup[Number]);     /* Display on the 7-Segment */
+      High = High % 10;            /* Remove the tenth digit from the TempHi */
+      Digit--;                      /* Subtract 1 digit */
+    }
+  
+    Number = High;                  /* Display the last digit */
+    Number = NumberLookup [Number]; 
+    if (Digit > 1)                  /* Display "." if it is not the last digit on 7-SEG */
+    {
+      Number = Number | B10000000;
+    }
+    Send7SEG (Digit,Number);  
+    Digit--;                        /* Subtract 1 digit */
+  
+    if (Digit > 0)                  /* Display decimal point if there is more space on 7-SEG */
+    {
+      Number = Decimal / 1000;
+      Send7SEG (Digit,NumberLookup[Number]);
+      Digit--;
+    }
+
+    if (Digit > 0)                 /* Display "c" if there is more space on 7-SEG */
+    {
+      if(celcius){
+        //Send7SEG (Digit,0x58);
+        Send7SEG (Digit,0x58);
+      } else {
+        Send7SEG (Digit,0x71);
+      }
+    
+      Digit--;
+    }
   }
   
   if (Digit > 0)                 /* Clear the rest of the digit */
@@ -313,17 +333,23 @@ void UpdateRGB (byte Temperature_H)
  Purpose: 
    Print current read temperature to the serial monitor.
 ****************************************************************************/
-void SerialMonitorPrint (byte Temperature_H, int Decimal, bool IsPositive)
+void SerialMonitorPrint (byte Temperature_H, int Decimal, bool IsPositive, bool blue_on)
 {
-    Serial.print("The temperature is ");
-    if (!IsPositive)
-    {
-      Serial.print("-");
-    }
-    Serial.print(Temperature_H, DEC);
-    Serial.print(".");
-    Serial.print(Decimal, DEC);
-    Serial.print(" degrees C");
+      Serial.print("The temperature is ");
+      if (!IsPositive)
+      {
+        Serial.print("-");
+      }
+      Serial.print(Temperature_H, DEC);
+      Serial.print(".");
+      Serial.print(Decimal, DEC);
+      if(blue_on == true){
+        Serial.print(" degrees F");
+      }
+      else{
+        Serial.print(" degrees C");
+      }
+    
     Serial.print("\n\n");
 }
     
