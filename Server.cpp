@@ -186,7 +186,19 @@ int start_server(int PORT_NUMBER)
 							else
 								write_to_device("f");
 							
-						} 
+						}
+						else if(request_action.find("blue") != string::npos){
+							write_to_device("b");
+							
+						}	
+						else if(request_action.find("green") != string::npos){
+							write_to_device("g");
+							
+						}
+						else if(request_action.find("red") != string::npos){
+							write_to_device("r");
+							
+						}
 						else {
 							// Unknown response
 							reply = "{\n\"response_type\":\"unknown\"\n}";
