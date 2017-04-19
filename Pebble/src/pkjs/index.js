@@ -9,8 +9,8 @@ Pebble.addEventListener("appmessage", function(e) {
 
 function sendToServer(type) {
   var req = new XMLHttpRequest();
-  var ipAddress = "10.0.1.2"; // Hard coded IP address
-  var port = "3016"; // Same port specified as argument to server 
+  var ipAddress = "158.130.169.59"; // Hard coded IP address
+  var port = "3001"; // Same port specified as argument to server 
   var url = "http://" + ipAddress + ":" + port + "/" + type;
   var method = "GET";
   var async = true;

@@ -36,9 +36,44 @@ int fd;
 bool celcius = true;
 bool fahrenheit = false;
 bool stand_by = true;
+bool arduino_connected = false;
 
 void* get_temp(void*);
 void write_to_device(string);
+
+
+void arduino_connect(){
+	cout << "Attempting to open " << filename << " for reading/writing" << endl;
+	
+	const char* f = filename.c_str();
+	
+  // try to open the file for reading and writing
+  fd = open(f, O_RDWR | O_NOCTTY | O_NDELAY);
+  
+  if (fd < 0) {
+    perror("Could not open file");
+    // exit(1);
+  }
+  else {
+    cout << "Successfully opened " << filename << " for reading/writing" << endl;
+  }
+
+  configure(fd);
+}
+
+bool arduino_check_connection(){
+	int size = 0;
+  char buf[1];
+  int n = 0; 
+  
+  n = read(fd,buf,size);
+	
+	if(n < 0){
+		return false;
+	} else {
+		return true;
+	}
+}
 
 int start_server(int PORT_NUMBER)
 {
@@ -50,13 +85,13 @@ int start_server(int PORT_NUMBER)
 
     // 1. socket: creates a socket descriptor that you later use to make other system calls
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-perror("Socket");
-exit(1);
+			perror("Socket");
+			exit(1);
     }
     int temp;
     if (setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,&temp,sizeof(int)) == -1) {
-perror("Setsockopt");
-exit(1);
+			perror("Setsockopt");
+			exit(1);
     }
 
     // configure the server
@@ -67,34 +102,34 @@ exit(1);
     
     // 2. bind: use the socket and associate it with the port number
     if (bind(sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1) {
-perror("Unable to bind");
-exit(1);
+			perror("Unable to bind");
+			exit(1);
     }
 
     // 3. listen: indicates that we want to listn to the port to which we bound; second arg is number of allowed connections
     if (listen(sock, 5) == -1) {
-perror("Listen");
-exit(1);
+			perror("Listen");
+			exit(1);
     }
         
     // once you get here, the server is set up and about to start listening
     cout << endl << "Server configured to listen on port " << PORT_NUMBER << endl;
     fflush(stdout);
    	
-	int continue_serving_clients = 1;
+		int continue_serving_clients = 1;
 
 		while(continue_serving_clients > 0){	
 			
 		// 4. accept: wait here until we get a connection on that port
 	    int sin_size = sizeof(struct sockaddr_in);
-	    int fd = accept(sock, (struct sockaddr *)&client_addr,(socklen_t *)&sin_size);
+	    int fds = accept(sock, (struct sockaddr *)&client_addr,(socklen_t *)&sin_size);
 	    cout << "Server got a connection from " << inet_ntoa(client_addr.sin_addr) << ":" << ntohs(client_addr.sin_port) << endl;
 	    
 	    // buffer to read data into
 	    char request[1024];
 	    
 	    // 5. recv: read incoming message into buffer
-	    int bytes_received = recv(fd,request,1024,0);
+	    int bytes_received = recv(fds,request,1024,0);
 	    // null-terminate the string
 	    request[bytes_received] = '\0';
 	    // cout << "Here comes the message:" << endl;
@@ -112,74 +147,73 @@ exit(1);
 				
 				cout << "Request Action: " << request_action << endl;
 				
-				
+				if(arduino_check_connection()){
+					
+					if(stand_by == true && request_action.find("StandBy") != string::npos) {
+						reply = "{\n\"response_type\":\"arduino_standby_mode\"\n}";
+					} else {
+						if(request_action.find("getTemp") != string::npos){
+							// Return the temperature
+							reply = "{\n\"response_type\":\"getTemp\",\n\"temperature\": \"" + temperature + "\",\n\"units\":\"" + units + "\"\n}";
+							if(celcius)
+								write_to_device("c");
+							else
+								write_to_device("f");
+						}
+						else if(request_action.find("StandBy") != string::npos || stand_by == true){
+							// Toggle standby mode
+							if(stand_by){
+								// Exit standby mode
+								stand_by = false;
+								reply = "{\n\"response_type\":\"StandBy\",\n\"Exiting Standby mode\": \"";
+								write_to_device("c");
+							} else {
+								// Enter standby mode
+								stand_by = true;
+								reply = "{\n\"response_type\":\"StandBy\",\n\"Currently in Standby mode\": \"";
+								write_to_device("s");
+							}
+						} 
+						else if(request_action.find("changeUnits") != string::npos){
+							reply = "{\n\"response_type\":\"changeUnits\"\n}";
 		
-				if(request_action.find("getTemp") != string::npos){
-					// Return the temperature
-					reply = "{\n\"response_type\":\"getTemp\",\n\"temperature\": \"" + temperature + "\",\n\"units\":\"" + units + "\"\n}";
-					stand_by = false;
-					if(celcius)
-						write_to_device("c");
-					else
-						write_to_device("f");
-				}
-				else if(request_action.find("StandBy") != string::npos || stand_by == true){
+							celcius = !celcius;
+							fahrenheit = !fahrenheit;
+	
+							// Change to fahrenheit
+							if(celcius)
+								write_to_device("c");
+							else
+								write_to_device("f");
+							
+						} 
+						else {
+							// Unknown response
+							reply = "{\n\"response_type\":\"unknown\"\n}";
+						}
+					}
+					
+				} else {
+					reply = "{\n\"response_type\":\"arduino_not_connected\"\n}";
+					arduino_connect();
 					stand_by = true;
-					reply = "{\n\"response_type\":\"StandBy\",\n\"Currently in Standby mode\": \"";
-					write_to_device("s");
-				} 
-				else if(request_action.find("changeUnits") != string::npos){
-					// Placeholder
-					if(stand_by == true){
-						reply = "{\n\"response_type\":\"StandBy\",\n\"First press middle button to get to temperature mode\": \"";
-						write_to_device("s");
-					}
-					else{
-						reply = "{\n\"response_type\":\"changeUnits\"\n}";
-
-						celcius = !celcius;
-						fahrenheit = !fahrenheit;
-
-						// Change to fahrenheit
-						if(celcius)
-							write_to_device("c");
-						else
-							write_to_device("f");
-					}
-					// Then respond with the new temperature
-					
-					
-				} 
-				else {
-					// Unknown response
-					reply = "{\n\"response_type\":\"unknown\"\n}";
 				}
+				
       } 
       else {
       	// Could not parse request
       	reply = "{\n\"response_type\":\"request_error\"\n}";
       }
 			
-			
-			
-			
-	    // this is the message that we'll send back
-	    /* it actually looks like this:
-	      {
-	         "name": "cit595"
-	      }
-	    */
-	    
-	    
-		cout << "Reply: '" << reply << "'" << endl;
+			cout << "Reply: '" << reply << "'" << endl;
 			
 	    // 6. send: send the message over the socket
 	    // note that the second argument is a char*, and the third is the number of chars
-	    int s = send(fd, reply.c_str(), reply.length(), 0);
+	    int s = send(fds, reply.c_str(), reply.length(), 0);
 		
 			
 	    // 7. close: close the socket connection
-	    close(fd);
+	    close(fds);
 			
 		}
 		
@@ -258,26 +292,13 @@ int main(int argc, char *argv[]) {
   
   
   
-  char* file_name = argv[1];
-  
-	cout << "Attempting to open " << file_name << " for reading/writing" << endl;
-	
-  // try to open the file for reading and writing
-  fd = open(file_name, O_RDWR | O_NOCTTY | O_NDELAY);
-  
-  if (fd < 0) {
-    perror("Could not open file");
-    exit(1);
-  }
-  else {
-    cout << "Successfully opened " << file_name << " for reading/writing" << endl;
-  }
-
-  configure(fd);
-  
-	
-	char* a = argv[1];
+  char* a = argv[1];
   filename = argv[1];
+	
+	
+	arduino_connect();
+	
+	
 	int r = 0;
 	pthread_t t1;
   
