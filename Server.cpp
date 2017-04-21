@@ -14,6 +14,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <pthread.h>
+#include <vector> 
+#include <climits> 
 using namespace std;
 
 
@@ -37,6 +39,7 @@ bool celcius = true;
 bool fahrenheit = false;
 bool stand_by = true;
 bool arduino_connected = false;
+vector<double> temperatures; 
 
 void* get_temp(void*);
 void write_to_device(string);
@@ -73,6 +76,37 @@ bool arduino_check_connection(){
 	} else {
 		return true;
 	}
+}
+
+double get_max_temperature(){
+	double max = INT_MIN; 
+	for(int i = 0; i < temperatures.size(); i++){
+		if(temperatures[i] > max){
+			max = temperatures[i];
+		}
+	}
+
+	return max; 
+}
+
+double get_min_temperature(){
+	double min = INT_MAX; 
+	for(int i = 0; i < temperatures.size(); i++){
+		if(temperatures[i] < min){
+			min = temperatures[i];
+		}
+	}
+
+	return min; 
+}
+
+double get_average_temperature(){
+	double total = 0; 
+	for(int i = 0; i < temperatures.size(); i++){
+		total += temperatures[i];
+	}
+
+	return total/temperatures.size(); 
 }
 
 int start_server(int PORT_NUMBER)
@@ -199,12 +233,27 @@ int start_server(int PORT_NUMBER)
 							write_to_device("r");
 							
 						}
+						else if(request_action.find("avg") != string::npos){
+							reply = "{\n\"response_type\":\"" + to_string(get_average_temperature())
+							+ "\"\n}";
+							
+						}	
+						else if(request_action.find("min") != string::npos){
+							reply = "{\n\"response_type\":\"" + to_string(get_min_temperature())
+							+ "\"\n}";
+							
+						}
+						else if(request_action.find("max") != string::npos){
+							reply = "{\n\"response_type\":\"" + to_string(get_max_temperature())
+							+ "\"\n}";
+							
+						}
 						else {
 							// Unknown response
 							reply = "{\n\"response_type\":\"unknown\"\n}";
 						}
 					}
-					
+				
 				} else {
 					reply = "{\n\"response_type\":\"arduino_not_connected\"\n}";
 					arduino_connect();
@@ -239,6 +288,14 @@ int start_server(int PORT_NUMBER)
 } 
 
 
+bool check_temperatures(){
+	if(temperatures.size() >= 3600){
+		return true;
+	}
+	return false; 
+}
+
+
 void* get_temp(void* p){
 
   int size = 20;
@@ -264,6 +321,13 @@ void* get_temp(void* p){
           int right_side = temp.find(" degrees");
           if(left_side != string::npos && right_side != string::npos){
               temperature = temp.substr(19, (right_side - 19));
+
+              temperatures.push_back(stod(temperature));
+
+              if(check_temperatures()){
+              	temperatures.erase(temperatures.begin()); 
+              }
+
               units = temp.substr((right_side + 9), 1);
               cout << "The weather is: '" << temperature << "' in '" << units << "'" << endl;
           }
