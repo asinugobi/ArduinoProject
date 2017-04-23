@@ -9,6 +9,7 @@ static SimpleMenuSection s_menu_sections[2];
 static SimpleMenuItem s_color_menu_items[3];
 static SimpleMenuItem s_temp_menu_items[3];
 static Window *menu_window;
+int do_not_disturb = 0;
 
 enum {
   MESSAGE = 0
@@ -33,7 +34,12 @@ void in_received_handler(DictionaryIterator *received, void *context) {
       strcpy(msg, text_tuple->value->cstring);
     } 
     else strcpy(msg, "no value!");
-    text_layer_set_text(hello_layer, msg); 
+    if(do_not_disturb <= 0){
+      text_layer_set_text(hello_layer, msg);
+    } else {
+      do_not_disturb--;
+    }
+     
   } else {
     text_layer_set_text(hello_layer, "no message!");
   }
@@ -91,6 +97,7 @@ static void color_menu_select_callback(int index, void *ctx) {
 static void temp_menu_select_callback(int index, void *ctx) {
   // s_first_menu_items[index].subtitle = "You've hit select here!";
   // layer_mark_dirty(simple_menu_layer_get_layer(s_menu_layer));
+  do_not_disturb = 5;
   if(index == 0){
     make_request("avg");
   } else if(index == 1){
@@ -222,4 +229,4 @@ int main(void) {
   init();
   app_event_loop();
   deinit();
-  }
+	}

@@ -9,11 +9,12 @@ Pebble.addEventListener("appmessage", function(e) {
 
 function sendToServer(type) {
   var req = new XMLHttpRequest();
-  var ipAddress = "158.130.169.59"; // Hard coded IP address
-  var port = "3001"; // Same port specified as argument to server 
+  var ipAddress = "10.0.1.2"; // Hard coded IP address
+  var port = "3002"; // Same port specified as argument to server 
   var url = "http://" + ipAddress + ":" + port + "/" + type;
   var method = "GET";
   var async = true;
+  req.timeout = 1500;
   console.log("URL: " + url);
   req.onload = function(e) {
     // see what came back
@@ -27,20 +28,32 @@ function sendToServer(type) {
         msg = "Changing the Units";
       } else if(response_type == "StandBy"){
         msg = "Standby Mode";
-      } else if(response_type == "StandByExiting"){
+      } else if(response_type == "StandByExit"){
         msg = "Exiting Standby Mode";
       } else if(response_type == "arduinoNotConnected"){
         msg = "Arduino Not Connected";
       } else if(response_type == "temperatureReportAvg"){
         msg = "Average: " + response.temperature_avg + " " + response.units;
       } else if(response_type == "temperatureReportMin"){
-        msg = "Low: " + response.temperature_avg + " " + response.units;
+        msg = "Low: " + response.temperature_min + " " + response.units;
       } else if(response_type == "temperatureReportMax"){
-        msg = "High: " + response.temperature_avg + " " + response.units;
+        msg = "High: " + response.temperature_max + " " + response.units;
+      } else if(response_type == "generalMessage"){
+        msg = response.message;
       }
       else msg = "Arduino error";
     }
     // sends message back to pebble 
+    Pebble.sendAppMessage({ "0": msg });
+  };
+  
+  req.ontimeout = function (e) {
+    var msg = "Server Not Running";
+    Pebble.sendAppMessage({ "0": msg });
+  };
+  
+  req.onerror = function (e) {
+    var msg = "Server Not Running";
     Pebble.sendAppMessage({ "0": msg });
   };
   

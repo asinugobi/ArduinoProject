@@ -45,6 +45,38 @@ void* get_temp(void*);
 void write_to_device(string);
 
 
+bool is_number(string s){
+	int dot_count = 0;
+	for(int i = 0; i < s.length(); i++){
+		if(s.c_str()[i] == '.'){
+			dot_count++;
+		}
+		if(s.c_str()[i] != '0' && s.c_str()[i] != '1' && s.c_str()[i] != '2' && s.c_str()[i] != '3' && s.c_str()[i] != '4' && s.c_str()[i] != '5' && s.c_str()[i] != '6' && s.c_str()[i] != '7' && s.c_str()[i] != '8' && s.c_str()[i] != '9' && s.c_str()[i] != '.'){
+			return false;
+		}
+	}
+	if(dot_count == 1){
+		return true;
+	}
+	return false;
+}
+
+string extract_number(string s){
+	string filtered;
+	int dot_count = 0;
+	for(int i = 0; i < s.length(); i++){
+		if(s.c_str()[i] == '.'){
+			dot_count++;
+		}
+		if(s.c_str()[i] != '0' && s.c_str()[i] != '1' && s.c_str()[i] != '2' && s.c_str()[i] != '3' && s.c_str()[i] != '4' && s.c_str()[i] != '5' && s.c_str()[i] != '6' && s.c_str()[i] != '7' && s.c_str()[i] != '8' && s.c_str()[i] != '9' && s.c_str()[i] != '.'){
+			
+		} else if(dot_count < 2) {
+			filtered += s.c_str()[i];
+		}
+	}
+	return filtered;
+}
+
 void arduino_connect(){
 	// cout << "Attempting to open " << filename << " for reading/writing" << endl;
 	
@@ -229,15 +261,15 @@ int start_server(int PORT_NUMBER)
 						}
 						else if(request_action.find("blue") != string::npos){
 							write_to_device("b");
-							
+							reply = "{\n\"response_type\":\"generalMessage\",\"message\":\"Changing to Blue\"\n}";
 						}	
 						else if(request_action.find("green") != string::npos){
 							write_to_device("g");
-							
+							reply = "{\n\"response_type\":\"generalMessage\",\"message\":\"Changing to Green\"\n}";
 						}
 						else if(request_action.find("red") != string::npos){
 							write_to_device("r");
-							
+							reply = "{\n\"response_type\":\"generalMessage\",\"message\":\"Changing to Red\"\n}";
 						}
 						else if(request_action.find("avg") != string::npos){
               double raw_temp = get_average_temperature();
@@ -348,25 +380,32 @@ void* get_temp(void* p){
           if(left_side != string::npos && right_side != string::npos){
             
             
-              temperature = temp.substr(19, (right_side - 19));
               
               
-
-              units = temp.substr((right_side + 9), 1);
+            	string temperature_raw = temp.substr(19, (right_side - 19));
+							string units_temp = temp.substr((right_side + 9), 1);
+              
+							
+							cout << "Reading: '" << temperature_raw << "'" << endl;
+							cout << "Units: '" << units_temp << "'" << endl;
+							
+							temperature_raw = extract_number(temperature_raw);
+							if(temp.c_str()[right_side + 10] == 'C' || temp.c_str()[right_side + 10] == 'F'){
+								units_temp = temp.c_str()[right_side + 10];
+							}
               
               
               
               
-              
-              
-              
-              
-              if(units == "C" || units == "F"){
+              if((units_temp == "C" || units_temp == "F") && is_number(temperature_raw)){
+                temperature = temperature_raw;
+                units = units_temp;
+								
+                char* null_term = 0;
+                double raw_temp = strtod(temperature.c_str(), &null_term);
                 
-                // cout << "Reading: '" << temp << "'" << endl;
-                
-                
-                double raw_temp = stod(temperature);
+								cout << "Which is: " << to_string(raw_temp) << endl;
+								
                 if(units == "F"){
                   raw_temp = ((9.0/5.0) * raw_temp) + 32.0;
                 }
@@ -410,6 +449,8 @@ void write_to_device(string message){
   int w = write(fd, a, 1);
   // cout << "Result: " << w << endl;
 }
+
+
 
 
 void* stop(void* arg){
@@ -472,6 +513,7 @@ int main(int argc, char *argv[]) {
 	int PORT_NUMBER = atoi(argv[2]);
   start_server(PORT_NUMBER);
   
+	
 }
 
 
