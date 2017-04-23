@@ -28,8 +28,8 @@
 #define GREEN (5)      /* Green color pin of RGB LED */
 #define BLUE (6)       /* Blue color pin of RGB LED */
 
-#define COLD (23)      /* Cold temperature, drive blue LED (23c) */
-#define HOT (26)       /* Hot temperature, drive red LED (27c) */
+#define COLD (10)      /* Cold temperature, drive blue LED (23c) */
+#define HOT (100)       /* Hot temperature, drive red LED (27c) */
 
 const byte NumberLookup[16] =   {0x3F,0x06,0x5B,0x4F,0x66,
                                  0x6D,0x7D,0x07,0x7F,0x6F, 
@@ -77,6 +77,9 @@ void loop()
   double temp_fahrenheit;
   static bool blue_on = false;
   static bool stand_by = true;
+  static bool red = false;
+  static bool green = false;
+  static bool blue = false;
   
   /* Configure 7-Segment to 12mA segment output current, Dynamic mode, 
      and Digits 1, 2, 3 AND 4 are NOT blanked */
@@ -130,22 +133,41 @@ void loop()
         
         if(buffer[0] == 'f')
         {
-            digitalWrite(BLUE, HIGH);
+            //digitalWrite(BLUE, HIGH);
             blue_on = true;
             stand_by = false;
-            SerialMonitorPrint (Temperature_H, Decimal, IsPositive, blue_on);
+            // SerialMonitorPrint (Temperature_H, Decimal, IsPositive, blue_on);
         }
         else if(buffer[0] == 'c'){
-          digitalWrite(BLUE, LOW);
+          //digitalWrite(BLUE, LOW);
           blue_on = false;
           stand_by = false;
-          SerialMonitorPrint (Temperature_H, Decimal, IsPositive, blue_on);
+          // SerialMonitorPrint (Temperature_H, Decimal, IsPositive, blue_on);
         }
         else if(buffer[0] == 's'){
           digitalWrite(BLUE, LOW);
           stand_by = true;
-          SerialMonitorPrint(Temperature_H, Decimal, IsPositive, blue_on);
+          // SerialMonitorPrint(Temperature_H, Decimal, IsPositive, blue_on);
+          digitalWrite(RED, LOW);
+          digitalWrite(GREEN, LOW);
+          digitalWrite(BLUE, LOW);
         }
+        else if(buffer[0] == 'r'){
+          digitalWrite(RED, HIGH);
+          digitalWrite(GREEN, LOW);
+          digitalWrite(BLUE, LOW);
+        }
+        else if(buffer[0] == 'g'){
+          digitalWrite(RED, LOW);
+          digitalWrite(GREEN, HIGH);
+          digitalWrite(BLUE, LOW);
+        }
+        else if(buffer[0] == 'b'){
+          digitalWrite(RED, LOW);
+          digitalWrite(GREEN, LOW);
+          digitalWrite(BLUE, HIGH);
+        }
+        
         
         memset(buffer, 0, 1); 
         delay(2000); 
