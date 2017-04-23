@@ -68,8 +68,11 @@ bool arduino_check_connection(){
   char buf[1];
   int n = 0; 
   
-  n = read(fd,buf,size);
+  char* a = "z";
+  n = write(fd, a, 1);
 	
+  cout << "Checking Connection: " << to_string(n) << endl;
+  
 	if(n < 0){
 		return false;
 	} else {
@@ -182,7 +185,7 @@ int start_server(int PORT_NUMBER)
 				
 				if(arduino_check_connection()){
 					
-					if(stand_by == true && request_action.find("StandBy") != string::npos) {
+					if(stand_by == true && request_action.find("Standby") == string::npos) {
 						reply = "{\n\"response_type\":\"StandBy\"\n}";
 					} else {
 						if(request_action.find("getTemp") != string::npos){
@@ -193,7 +196,7 @@ int start_server(int PORT_NUMBER)
 							else
 								write_to_device("c");
 						}
-						else if(request_action.find("StandBy") != string::npos || stand_by == true){
+						else if(request_action.find("Standby") != string::npos || stand_by == true){
 							// Toggle standby mode
 							if(stand_by){
 								// Exit standby mode
@@ -351,7 +354,10 @@ void* get_temp(void* p){
               }
 
               units = temp.substr((right_side + 9), 1);
-              cout << "The weather is: '" << temperature << "' in '" << units << "'" << endl;
+              if(!stand_by){
+                cout << "The weather is: '" << temperature << "' in '" << units << "'" << endl;
+              }
+              
           }
           line.clear();
           memset(buf, 0, size);
@@ -365,16 +371,24 @@ void* get_temp(void* p){
 }
 
 void write_to_device(string message){
-	char* a;
-  if(message == "c")
-  	a = "c";
-  else if(message == "f")
-  	a = "f";
-  else
-  	a = "s";
-
+  
+  
+  
+	const char* a = message.c_str();
+  /*
+  char a;
+  if(message == "c"){
+    a = 'c';
+  } else if(message == "f"){
+    a = 'f';
+  } else if(message == "s"){
+    a = 's';
+  } else {
+    a = 'z';
+  }
+  */
   cout << "Writing " << message << " to the device" << endl;
-  int w = write(fd, a, 1);
+  int w = write(fd, &a, 1);
   cout << "Result: " << w << endl;
 }
 
