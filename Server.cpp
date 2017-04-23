@@ -39,13 +39,14 @@ bool fahrenheit = false;
 bool stand_by = true;
 bool arduino_connected = false;
 vector<double> temperatures; 
+int exit_flag = 0;
 
 void* get_temp(void*);
 void write_to_device(string);
 
 
 void arduino_connect(){
-	cout << "Attempting to open " << filename << " for reading/writing" << endl;
+	// cout << "Attempting to open " << filename << " for reading/writing" << endl;
 	
 	const char* f = filename.c_str();
 	
@@ -57,7 +58,7 @@ void arduino_connect(){
     // exit(1);
   }
   else {
-    cout << "Successfully opened " << filename << " for reading/writing" << endl;
+    // cout << "Successfully opened " << filename << " for reading/writing" << endl;
   }
 
   configure(fd);
@@ -74,7 +75,7 @@ bool arduino_check_connection(){
   char* a = "z";
   n = write(fd, a, 0);
 	
-  cout << "Checking Connection: " << to_string(n) << endl;
+  // cout << "Checking Connection: " << to_string(n) << endl;
   
 	if(n < 0){
 		return false;
@@ -152,17 +153,17 @@ int start_server(int PORT_NUMBER)
     }
         
     // once you get here, the server is set up and about to start listening
-    cout << endl << "Server configured to listen on port " << PORT_NUMBER << endl;
+    // cout << endl << "Server configured to listen on port " << PORT_NUMBER << endl;
     fflush(stdout);
    	
-		int continue_serving_clients = 1;
+		// int continue_serving_clients = 1;
 
-		while(continue_serving_clients > 0){	
+		while(exit_flag != 1){	
 			
 		// 4. accept: wait here until we get a connection on that port
 	    int sin_size = sizeof(struct sockaddr_in);
 	    int fds = accept(sock, (struct sockaddr *)&client_addr,(socklen_t *)&sin_size);
-	    cout << "Server got a connection from " << inet_ntoa(client_addr.sin_addr) << ":" << ntohs(client_addr.sin_port) << endl;
+	    // cout << "Server got a connection from " << inet_ntoa(client_addr.sin_addr) << ":" << ntohs(client_addr.sin_port) << endl;
 	    
 	    // buffer to read data into
 	    char request[1024];
@@ -184,7 +185,7 @@ int start_server(int PORT_NUMBER)
 				
 				string request_action = request_string.substr(request_start + 1, request_end);
 				
-				cout << "Request Action: " << request_action << endl;
+				// cout << "Request Action: " << request_action << endl;
 				
 				if(arduino_check_connection()){
 					
@@ -289,7 +290,7 @@ int start_server(int PORT_NUMBER)
       	reply = "{\n\"response_type\":\"request_error\"\n}";
       }
 			
-			cout << "Reply: '" << reply << "'" << endl;
+			// cout << "Reply: '" << reply << "'" << endl;
 			
 	    // 6. send: send the message over the socket
 	    // note that the second argument is a char*, and the third is the number of chars
@@ -362,14 +363,14 @@ void* get_temp(void* p){
               
               if(units == "C" || units == "F"){
                 
-                cout << "Reading: '" << temp << "'" << endl;
+                // cout << "Reading: '" << temp << "'" << endl;
                 
                 
                 double raw_temp = stod(temperature);
                 if(units == "F"){
                   raw_temp = ((9.0/5.0) * raw_temp) + 32.0;
                 }
-                cout << "RawTemp: " << to_string(raw_temp) << endl;
+                // cout << "RawTemp: " << to_string(raw_temp) << endl;
                 temperatures.push_back(raw_temp);
   
                 if(check_temperatures()){
@@ -377,7 +378,7 @@ void* get_temp(void* p){
                 }
                 
                 if(!stand_by){
-                  cout << "The weather is: '" << temperature << "' in '" << units << "'" << endl;
+                  // cout << "The weather is: '" << temperature << "' in '" << units << "'" << endl;
                 }
               }
               
@@ -405,11 +406,28 @@ void write_to_device(string message){
   else
   	a = "s";
 */
-  cout << "Writing " << a << " to the device" << endl;
+  // cout << "Writing " << a << " to the device" << endl;
   int w = write(fd, a, 1);
-  cout << "Result: " << w << endl;
+  // cout << "Result: " << w << endl;
 }
 
+
+void* stop(void* arg){
+  char input[50];
+  while(exit_flag != 1){
+    cout << "Type q to exit: ";
+    
+    scanf("%s", &input);
+    
+    if(input[0] == 'q'){
+      write_to_device("s");
+      exit_flag = 1;
+    }
+    
+    cout << endl;
+  }
+  // free(input);
+}
 
 
 int main(int argc, char *argv[]) {
@@ -436,6 +454,16 @@ int main(int argc, char *argv[]) {
 	r = pthread_create(&t1, NULL, &get_temp, a);
 	
 	if(r != 0){
+    // Thread was not successful!
+  }
+  
+  int s = 0;
+	pthread_t t2;
+  
+  
+	s = pthread_create(&t2, NULL, &stop, a);
+	
+	if(s != 0){
     // Thread was not successful!
   }
 	
