@@ -64,12 +64,15 @@ void arduino_connect(){
 }
 
 bool arduino_check_connection(){
+  // return true;
+  
+  
 	int size = 0;
   char buf[1];
   int n = 0; 
   
   char* a = "z";
-  n = write(fd, a, 1);
+  n = write(fd, a, 0);
 	
   cout << "Checking Connection: " << to_string(n) << endl;
   
@@ -191,10 +194,10 @@ int start_server(int PORT_NUMBER)
 						if(request_action.find("getTemp") != string::npos){
 							// Return the temperature
 							reply = "{\n\"response_type\":\"getTemp\",\n\"temperature\": \"" + temperature + "\",\n\"units\":\"" + units + "\"\n}";
-							if(fahrenheit)
-								write_to_device("f");
-							else
-								write_to_device("c");
+							// if(fahrenheit)
+								// write_to_device("f");
+							// else
+								// write_to_device("c");
 						}
 						else if(request_action.find("Standby") != string::npos || stand_by == true){
 							// Toggle standby mode
@@ -337,26 +340,48 @@ void* get_temp(void* p){
           
           temp = line.substr(0, pos);
           
+          
+          
           int left_side = temp.find("The temperature is ");
           int right_side = temp.find(" degrees");
           if(left_side != string::npos && right_side != string::npos){
+            
+            
               temperature = temp.substr(19, (right_side - 19));
               
-              double raw_temp = stod(temperature);
-              if(fahrenheit){
-                raw_temp = ((5.0/9.0) * raw_temp) - 32.0;
-              }
               
-              temperatures.push_back(raw_temp);
-
-              if(check_temperatures()){
-              	temperatures.erase(temperatures.begin()); 
-              }
 
               units = temp.substr((right_side + 9), 1);
-              if(!stand_by){
-                cout << "The weather is: '" << temperature << "' in '" << units << "'" << endl;
+              
+              
+              
+              
+              
+              
+              
+              
+              if(units == "C" || units == "F"){
+                
+                cout << "Reading: '" << temp << "'" << endl;
+                
+                
+                double raw_temp = stod(temperature);
+                if(units == "F"){
+                  raw_temp = ((9.0/5.0) * raw_temp) + 32.0;
+                }
+                cout << "RawTemp: " << to_string(raw_temp) << endl;
+                temperatures.push_back(raw_temp);
+  
+                if(check_temperatures()){
+                	temperatures.erase(temperatures.begin()); 
+                }
+                
+                if(!stand_by){
+                  cout << "The weather is: '" << temperature << "' in '" << units << "'" << endl;
+                }
               }
+              
+              
               
           }
           line.clear();
@@ -371,24 +396,17 @@ void* get_temp(void* p){
 }
 
 void write_to_device(string message){
-  
-  
-  
-	const char* a = message.c_str();
+  const char* a = message.c_str();
   /*
-  char a;
-  if(message == "c"){
-    a = 'c';
-  } else if(message == "f"){
-    a = 'f';
-  } else if(message == "s"){
-    a = 's';
-  } else {
-    a = 'z';
-  }
-  */
-  cout << "Writing " << message << " to the device" << endl;
-  int w = write(fd, &a, 1);
+  if(message == "c")
+  	a = "c";
+  else if(message == "f")
+  	a = "f";
+  else
+  	a = "s";
+*/
+  cout << "Writing " << a << " to the device" << endl;
+  int w = write(fd, a, 1);
   cout << "Result: " << w << endl;
 }
 
