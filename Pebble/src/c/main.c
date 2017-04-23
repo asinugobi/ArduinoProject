@@ -5,8 +5,9 @@ static TextLayer *hello_layer;
 static char msg[100];
 static AppTimer *s_progress_timer;
 static SimpleMenuLayer *s_menu_layer;
-static SimpleMenuSection s_menu_sections[1];
-static SimpleMenuItem s_menu_items[3];
+static SimpleMenuSection s_menu_sections[2];
+static SimpleMenuItem s_color_menu_items[3];
+static SimpleMenuItem s_temp_menu_items[3];
 static Window *menu_window;
 
 enum {
@@ -20,7 +21,6 @@ void out_failed_handler(DictionaryIterator *failed, AppMessageResult reason, voi
   // outgoing message failed
   text_layer_set_text(hello_layer, "Error out!");
 }
-  
 
 void in_received_handler(DictionaryIterator *received, void *context) {
   // incoming message received
@@ -75,7 +75,7 @@ void down_click_handler(ClickRecognizerRef recognizer, void *context) {
 
 
 /* Menu Functions */
-static void menu_select_callback(int index, void *ctx) {
+static void color_menu_select_callback(int index, void *ctx) {
   // s_first_menu_items[index].subtitle = "You've hit select here!";
   // layer_mark_dirty(simple_menu_layer_get_layer(s_menu_layer));
   if(index == 0){
@@ -84,6 +84,19 @@ static void menu_select_callback(int index, void *ctx) {
     make_request("green");
   } else if(index == 2){
     make_request("red");
+  }
+  window_stack_pop(true);
+}
+
+static void temp_menu_select_callback(int index, void *ctx) {
+  // s_first_menu_items[index].subtitle = "You've hit select here!";
+  // layer_mark_dirty(simple_menu_layer_get_layer(s_menu_layer));
+  if(index == 0){
+    make_request("avg");
+  } else if(index == 1){
+    make_request("max");
+  } else if(index == 2){
+    make_request("min");
   }
   window_stack_pop(true);
 }
@@ -121,27 +134,47 @@ static void menu_window_load(Window* window){
   GRect bounds = layer_get_bounds(window_layer);
   
   // Create the menu items
-  s_menu_items[0] = (SimpleMenuItem) {
+  s_color_menu_items[0] = (SimpleMenuItem) {
     .title = "Blue",
-    .callback = menu_select_callback,
+    .callback = color_menu_select_callback,
   };
-  s_menu_items[1] = (SimpleMenuItem) {
+  s_color_menu_items[1] = (SimpleMenuItem) {
     .title = "Green",
-    .callback = menu_select_callback,
+    .callback = color_menu_select_callback,
   };
-  s_menu_items[2] = (SimpleMenuItem) {
+  s_color_menu_items[2] = (SimpleMenuItem) {
     .title = "Red",
-    .callback = menu_select_callback,
+    .callback = color_menu_select_callback,
   };
   
   // Create the menu section
   s_menu_sections[0] = (SimpleMenuSection) {
     .num_items = 3,
-    .items = s_menu_items,
+    .items = s_color_menu_items,
+  };
+  
+  // Create the menu items
+  s_temp_menu_items[0] = (SimpleMenuItem) {
+    .title = "Average",
+    .callback = temp_menu_select_callback,
+  };
+  s_temp_menu_items[1] = (SimpleMenuItem) {
+    .title = "High",
+    .callback = temp_menu_select_callback,
+  };
+  s_temp_menu_items[2] = (SimpleMenuItem) {
+    .title = "Low",
+    .callback = temp_menu_select_callback,
+  };
+  
+  // Create the menu section
+  s_menu_sections[1] = (SimpleMenuSection) {
+    .num_items = 3,
+    .items = s_temp_menu_items,
   };
   
   // Create the menu
-  s_menu_layer = simple_menu_layer_create(bounds, window, s_menu_sections, 1, NULL);
+  s_menu_layer = simple_menu_layer_create(bounds, window, s_menu_sections, 2, NULL);
   layer_add_child(window_layer, simple_menu_layer_get_layer(s_menu_layer));
 }
 
@@ -189,4 +222,4 @@ int main(void) {
   init();
   app_event_loop();
   deinit();
-	}
+  }

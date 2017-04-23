@@ -25,8 +25,20 @@ function sendToServer(type) {
         msg = "It is " + response.temperature + " " + response.units + " in here";
       } else if(response_type == "changeUnits"){
         msg = "Changing the Units";
+      } else if(response_type == "StandBy"){
+        msg = "Standby Mode";
+      } else if(response_type == "StandByExiting"){
+        msg = "Exiting Standby Mode";
+      } else if(response_type == "arduinoNotConnected"){
+        msg = "Arduino Not Connected";
+      } else if(response_type == "temperatureReportAvg"){
+        msg = "Average: " + response.temperature_avg + " " + response.units;
+      } else if(response_type == "temperatureReportMin"){
+        msg = "Low: " + response.temperature_avg + " " + response.units;
+      } else if(response_type == "temperatureReportMax"){
+        msg = "High: " + response.temperature_avg + " " + response.units;
       }
-      else msg = "noname";
+      else msg = "Arduino error";
     }
     // sends message back to pebble 
     Pebble.sendAppMessage({ "0": msg });

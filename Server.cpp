@@ -35,7 +35,6 @@ string temperature;
 string units;
 string filename;
 int fd;
-bool celcius = true;
 bool fahrenheit = false;
 bool stand_by = true;
 bool arduino_connected = false;
@@ -184,41 +183,41 @@ int start_server(int PORT_NUMBER)
 				if(arduino_check_connection()){
 					
 					if(stand_by == true && request_action.find("StandBy") != string::npos) {
-						reply = "{\n\"response_type\":\"arduino_standby_mode\"\n}";
+						reply = "{\n\"response_type\":\"StandBy\"\n}";
 					} else {
 						if(request_action.find("getTemp") != string::npos){
 							// Return the temperature
 							reply = "{\n\"response_type\":\"getTemp\",\n\"temperature\": \"" + temperature + "\",\n\"units\":\"" + units + "\"\n}";
-							if(celcius)
-								write_to_device("c");
-							else
+							if(fahrenheit)
 								write_to_device("f");
+							else
+								write_to_device("c");
 						}
 						else if(request_action.find("StandBy") != string::npos || stand_by == true){
 							// Toggle standby mode
 							if(stand_by){
 								// Exit standby mode
 								stand_by = false;
-								reply = "{\n\"response_type\":\"StandBy\",\n\"Exiting Standby mode\": \"";
+								reply = "{\n\"response_type\":\"StandByExit\"\n}";
 								write_to_device("c");
+                fahrenheit = false;
 							} else {
 								// Enter standby mode
 								stand_by = true;
-								reply = "{\n\"response_type\":\"StandBy\",\n\"Currently in Standby mode\": \"";
+								reply = "{\n\"response_type\":\"StandBy\"\n}";
 								write_to_device("s");
 							}
 						} 
 						else if(request_action.find("changeUnits") != string::npos){
 							reply = "{\n\"response_type\":\"changeUnits\"\n}";
-		
-							celcius = !celcius;
+              
 							fahrenheit = !fahrenheit;
 	
 							// Change to fahrenheit
-							if(celcius)
-								write_to_device("c");
-							else
+							if(fahrenheit)
 								write_to_device("f");
+							else
+								write_to_device("c");
 							
 						}
 						else if(request_action.find("blue") != string::npos){
@@ -234,28 +233,46 @@ int start_server(int PORT_NUMBER)
 							
 						}
 						else if(request_action.find("avg") != string::npos){
-							reply = "{\n\"response_type\":\"" + to_string(get_average_temperature())
-							+ "\"\n}";
+              double raw_temp = get_average_temperature();
+              string unit = "C";
+              if(fahrenheit){
+                raw_temp = ((9.0/5.0) * raw_temp) + 32.0;
+                unit = "F";
+              }
+              
+              reply = "{\n\"response_type\":\"temperatureReportAvg\",\n\"temperature_avg\": \"" + to_string(raw_temp) + "\",\n\"units\":\"" + unit + "\"\n}";
 							
 						}	
 						else if(request_action.find("min") != string::npos){
-							reply = "{\n\"response_type\":\"" + to_string(get_min_temperature())
-							+ "\"\n}";
+							double raw_temp = get_min_temperature();
+              string unit = "C";
+              if(fahrenheit){
+                raw_temp = ((9.0/5.0) * raw_temp) + 32.0;
+                unit = "F";
+              }
+              
+              reply = "{\n\"response_type\":\"temperatureReportMin\",\n\"temperature_min\": \"" + to_string(raw_temp) + "\",\n\"units\":\"" + unit + "\"\n}";
 							
 						}
 						else if(request_action.find("max") != string::npos){
-							reply = "{\n\"response_type\":\"" + to_string(get_max_temperature())
-							+ "\"\n}";
+							double raw_temp = get_max_temperature();
+              string unit = "C";
+              if(fahrenheit){
+                raw_temp = ((9.0/5.0) * raw_temp) + 32.0;
+                unit = "F";
+              }
+              
+              reply = "{\n\"response_type\":\"temperatureReportMax\",\n\"temperature_max\": \"" + to_string(raw_temp) + "\",\n\"units\":\"" + unit + "\"\n}";
 							
 						}
 						else {
 							// Unknown response
-							reply = "{\n\"response_type\":\"unknown\"\n}";
+							reply = "{\n\"response_type\":\"A\"\n}";
 						}
 					}
 				
 				} else {
-					reply = "{\n\"response_type\":\"arduino_not_connected\"\n}";
+					reply = "{\n\"response_type\":\"arduinoNotConnected\"\n}";
 					arduino_connect();
 					stand_by = true;
 				}
@@ -321,8 +338,13 @@ void* get_temp(void* p){
           int right_side = temp.find(" degrees");
           if(left_side != string::npos && right_side != string::npos){
               temperature = temp.substr(19, (right_side - 19));
-
-              temperatures.push_back(stod(temperature));
+              
+              double raw_temp = stod(temperature);
+              if(fahrenheit){
+                raw_temp = ((5.0/9.0) * raw_temp) - 32.0;
+              }
+              
+              temperatures.push_back(raw_temp);
 
               if(check_temperatures()){
               	temperatures.erase(temperatures.begin()); 
