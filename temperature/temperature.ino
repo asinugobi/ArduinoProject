@@ -132,6 +132,7 @@ void loop()
         {
             digitalWrite(BLUE, HIGH);
             blue_on = true;
+            stand_by = false;
             SerialMonitorPrint (Temperature_H, Decimal, IsPositive, blue_on);
         }
         else if(buffer[0] == 'c'){
@@ -140,7 +141,7 @@ void loop()
           stand_by = false;
           SerialMonitorPrint (Temperature_H, Decimal, IsPositive, blue_on);
         }
-        else{
+        else if(buffer[0] == 's'){
           digitalWrite(BLUE, LOW);
           stand_by = true;
           SerialMonitorPrint(Temperature_H, Decimal, IsPositive, blue_on);
