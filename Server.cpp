@@ -41,10 +41,11 @@ bool arduino_connected = false;
 vector<double> temperatures; 
 int exit_flag = 0;
 
+// Function pointer to start temperature reading thread
 void* get_temp(void*);
 void write_to_device(string);
 
-
+// Helper function to check if a string is a number
 bool is_number(string s){
 	int dot_count = 0;
 	for(int i = 0; i < s.length(); i++){
@@ -61,6 +62,7 @@ bool is_number(string s){
 	return false;
 }
 
+// Helper function to strip non numeric characters from a number string
 string extract_number(string s){
 	string filtered;
 	int dot_count = 0;
@@ -77,9 +79,8 @@ string extract_number(string s){
 	return filtered;
 }
 
+// Function to initialize a connection to the Arduino
 void arduino_connect(){
-	// cout << "Attempting to open " << filename << " for reading/writing" << endl;
-	
 	const char* f = filename.c_str();
 	
   // try to open the file for reading and writing
@@ -87,35 +88,31 @@ void arduino_connect(){
   
   if (fd < 0) {
     perror("Could not open file");
-    // exit(1);
-  }
-  else {
-    // cout << "Successfully opened " << filename << " for reading/writing" << endl;
+		return;
   }
 
   configure(fd);
 }
 
+// Function to check if the Arduino is still connected
 bool arduino_check_connection(){
-  // return true;
-  
-  
+  // Read a buffer of size 0
 	int size = 0;
   char buf[1];
   int n = 0; 
   
-  char* a = "z";
-  n = write(fd, a, 0);
-	
-  // cout << "Checking Connection: " << to_string(n) << endl;
-  
-	if(n < 0){
+  char a = 'z';
+  n = write(fd, &a, 0);
+  if(n < 0){
+		// Error - Not Connected
 		return false;
 	} else {
+		// Read 0 bytes - Connected
 		return true;
 	}
 }
 
+// Calculate the max temperature
 double get_max_temperature(){
 	double max = INT_MIN; 
 	for(int i = 0; i < temperatures.size(); i++){
@@ -127,6 +124,7 @@ double get_max_temperature(){
 	return max; 
 }
 
+// Calculate the min temperature
 double get_min_temperature(){
 	double min = INT_MAX; 
 	for(int i = 0; i < temperatures.size(); i++){
@@ -138,6 +136,7 @@ double get_min_temperature(){
 	return min; 
 }
 
+// Calculate the average temperature
 double get_average_temperature(){
 	double total = 0; 
 	for(int i = 0; i < temperatures.size(); i++){
@@ -147,6 +146,7 @@ double get_average_temperature(){
 	return total/temperatures.size(); 
 }
 
+// Starting the server
 int start_server(int PORT_NUMBER)
 {
 
@@ -185,52 +185,43 @@ int start_server(int PORT_NUMBER)
     }
         
     // once you get here, the server is set up and about to start listening
-    // cout << endl << "Server configured to listen on port " << PORT_NUMBER << endl;
     fflush(stdout);
    	
-		// int continue_serving_clients = 1;
-
+		
+		// Continue accepting conenctions until quit
 		while(exit_flag != 1){	
 			
-		// 4. accept: wait here until we get a connection on that port
+			// 4. accept: wait here until we get a connection on that port
 	    int sin_size = sizeof(struct sockaddr_in);
 	    int fds = accept(sock, (struct sockaddr *)&client_addr,(socklen_t *)&sin_size);
-	    // cout << "Server got a connection from " << inet_ntoa(client_addr.sin_addr) << ":" << ntohs(client_addr.sin_port) << endl;
 	    
-	    // buffer to read data into
+			// buffer to read data into
 	    char request[1024];
 	    
 	    // 5. recv: read incoming message into buffer
 	    int bytes_received = recv(fds,request,1024,0);
 	    // null-terminate the string
 	    request[bytes_received] = '\0';
-	    // cout << "Here comes the message:" << endl;
-	    // cout << request << endl;
 	
-		string reply;
+			string reply;
 	    
-		// Parse GET Response
-		string request_string = request;
-		int request_start = request_string.find('/');
-      	if(request_start != string::npos){
+			// Parse GET Response
+			string request_string = request;
+			int request_start = request_string.find('/');
+      if(request_start != string::npos){
 				int request_end = request_string.substr(request_start, request_string.length() - request_start).find(' ');
 				
 				string request_action = request_string.substr(request_start + 1, request_end);
 				
-				// cout << "Request Action: " << request_action << endl;
-				
+				// Check if the arduino is connected
 				if(arduino_check_connection()){
-					
 					if(stand_by == true && request_action.find("Standby") == string::npos) {
+						// Non-standby request while in standby mode
 						reply = "{\n\"response_type\":\"StandBy\"\n}";
 					} else {
 						if(request_action.find("getTemp") != string::npos){
 							// Return the temperature
 							reply = "{\n\"response_type\":\"getTemp\",\n\"temperature\": \"" + temperature + "\",\n\"units\":\"" + units + "\"\n}";
-							// if(fahrenheit)
-								// write_to_device("f");
-							// else
-								// write_to_device("c");
 						}
 						else if(request_action.find("Standby") != string::npos || stand_by == true){
 							// Toggle standby mode
@@ -252,7 +243,7 @@ int start_server(int PORT_NUMBER)
               
 							fahrenheit = !fahrenheit;
 	
-							// Change to fahrenheit
+							// Change the units
 							if(fahrenheit)
 								write_to_device("f");
 							else
@@ -260,21 +251,26 @@ int start_server(int PORT_NUMBER)
 							
 						}
 						else if(request_action.find("blue") != string::npos){
+							// Change to blue
 							write_to_device("b");
 							reply = "{\n\"response_type\":\"generalMessage\",\"message\":\"Changing to Blue\"\n}";
 						}	
 						else if(request_action.find("green") != string::npos){
+							// Change to green
 							write_to_device("g");
 							reply = "{\n\"response_type\":\"generalMessage\",\"message\":\"Changing to Green\"\n}";
 						}
 						else if(request_action.find("red") != string::npos){
+							// Change to red
 							write_to_device("r");
 							reply = "{\n\"response_type\":\"generalMessage\",\"message\":\"Changing to Red\"\n}";
 						}
 						else if(request_action.find("avg") != string::npos){
+							// Get the average temperature
               double raw_temp = get_average_temperature();
               string unit = "C";
               if(fahrenheit){
+								// Change units if in farenheit
                 raw_temp = ((9.0/5.0) * raw_temp) + 32.0;
                 unit = "F";
               }
@@ -283,9 +279,11 @@ int start_server(int PORT_NUMBER)
 							
 						}	
 						else if(request_action.find("min") != string::npos){
+							// Get the min temperature
 							double raw_temp = get_min_temperature();
               string unit = "C";
               if(fahrenheit){
+								// Change units if in farenheit
                 raw_temp = ((9.0/5.0) * raw_temp) + 32.0;
                 unit = "F";
               }
@@ -294,9 +292,11 @@ int start_server(int PORT_NUMBER)
 							
 						}
 						else if(request_action.find("max") != string::npos){
+							// Get the max temperature
 							double raw_temp = get_max_temperature();
               string unit = "C";
               if(fahrenheit){
+								// Change units if in farenheit
                 raw_temp = ((9.0/5.0) * raw_temp) + 32.0;
                 unit = "F";
               }
@@ -311,6 +311,7 @@ int start_server(int PORT_NUMBER)
 					}
 				
 				} else {
+					// Arduino not connected
 					reply = "{\n\"response_type\":\"arduinoNotConnected\"\n}";
 					arduino_connect();
 					stand_by = true;
@@ -322,9 +323,7 @@ int start_server(int PORT_NUMBER)
       	reply = "{\n\"response_type\":\"request_error\"\n}";
       }
 			
-			// cout << "Reply: '" << reply << "'" << endl;
-			
-	    // 6. send: send the message over the socket
+			// 6. send: send the message over the socket
 	    // note that the second argument is a char*, and the third is the number of chars
 	    int s = send(fds, reply.c_str(), reply.length(), 0);
 		
@@ -334,16 +333,13 @@ int start_server(int PORT_NUMBER)
 			
 		}
 		
-		
-
-    
     close(sock);
     cout << "Server closed connection" << endl;
 
     return 0;
 } 
 
-
+// Function to check if there are 1 hours worth of readings
 bool check_temperatures(){
 	if(temperatures.size() >= 3600){
 		return true;
@@ -351,7 +347,7 @@ bool check_temperatures(){
 	return false; 
 }
 
-
+// Temperature reading loop
 void* get_temp(void* p){
 
   int size = 20;
@@ -361,6 +357,7 @@ void* get_temp(void* p){
   int n = 0; 
   int pos = 0; 
 
+	// Read data from the Arduino
   while((n = read(fd,buf,size))){
       if(n < 1){
           continue;
@@ -373,27 +370,23 @@ void* get_temp(void* p){
           
           temp = line.substr(0, pos);
           
-          
-          
           int left_side = temp.find("The temperature is ");
           int right_side = temp.find(" degrees");
+					
+					// Search the line for the key phrases
           if(left_side != string::npos && right_side != string::npos){
-            
-            
-              
-              
+            	
+							// Extract the temperature and unit strings
             	string temperature_raw = temp.substr(19, (right_side - 19));
 							string units_temp = temp.substr((right_side + 9), 1);
               
-							
+							// Correct data
 							temperature_raw = extract_number(temperature_raw);
 							if(temp.c_str()[right_side + 10] == 'C' || temp.c_str()[right_side + 10] == 'F'){
 								units_temp = temp.c_str()[right_side + 10];
 							}
               
-              
-              
-              
+              // Check if valid temperature reading
               if((units_temp == "C" || units_temp == "F") && is_number(temperature_raw)){
                 temperature = temperature_raw;
                 units = units_temp;
@@ -401,7 +394,7 @@ void* get_temp(void* p){
                 char* null_term = 0;
                 double raw_temp = strtod(temperature.c_str(), &null_term);
                 
-								
+								// Convert and add reading to collection
                 if(units == "F"){
                   raw_temp = (5.0/9.0) * (raw_temp - 32.0);
 									temperatures.push_back(raw_temp);
@@ -409,14 +402,12 @@ void* get_temp(void* p){
 									temperatures.push_back(raw_temp);
                 }
                 
-  
+  							// Delete temperatures if needed
                 if(check_temperatures()){
                 	temperatures.erase(temperatures.begin()); 
                 }
                 
               }
-              
-              
               
           }
           line.clear();
@@ -430,85 +421,66 @@ void* get_temp(void* p){
 		return p;
 }
 
+// Function to write a key message to the Arduino
 void write_to_device(string message){
   const char* a = message.c_str();
-  /*
-  if(message == "c")
-  	a = "c";
-  else if(message == "f")
-  	a = "f";
-  else
-  	a = "s";
-*/
-  // cout << "Writing " << a << " to the device" << endl;
   int w = write(fd, a, 1);
-  // cout << "Result: " << w << endl;
 }
 
-
-
-
+// Stop Thread
 void* stop(void* arg){
-  char input[50];
+  char input = 'z';
   while(exit_flag != 1){
     cout << "Type q to exit: ";
     
     scanf("%s", &input);
     
-    if(input[0] == 'q'){
+    if(input	== 'q'){
       write_to_device("s");
       exit_flag = 1;
     }
     
     cout << endl;
   }
-  // free(input);
+	return arg;
 }
 
-
+// Main Start
 int main(int argc, char *argv[]) {
 
   if (argc < 3) {
-		
+		// Incorrect parameter usage
     cout << "Usage: [serial port (USB) device file] [port number]" << endl;
     exit(0);
   }
   
-  
-  
+  // Extract filename
   char* a = argv[1];
   filename = argv[1];
 	
-	
+	// Connect to the Arduino
 	arduino_connect();
 	
-	
+	// Start the temperature reading thread
 	int r = 0;
 	pthread_t t1;
-  
-  
 	r = pthread_create(&t1, NULL, &get_temp, a);
-	
 	if(r != 0){
     // Thread was not successful!
+		exit(1);
   }
   
+	// Start the stop thread
   int s = 0;
 	pthread_t t2;
-  
-  
 	s = pthread_create(&t2, NULL, &stop, a);
-	
 	if(s != 0){
     // Thread was not successful!
+		exit(1);
   }
-	
 	
 	// Start the server
 	int PORT_NUMBER = atoi(argv[2]);
   start_server(PORT_NUMBER);
   
-	
 }
-
-

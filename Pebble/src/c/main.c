@@ -50,6 +50,7 @@ void in_dropped_handler(AppMessageResult reason, void *context) {
   text_layer_set_text(hello_layer, "Error in!");
 }
 
+// Make a request to the server
 void make_request(char* request_type){
   DictionaryIterator *iter;
   app_message_outbox_begin(&iter);
@@ -57,8 +58,10 @@ void make_request(char* request_type){
   app_message_outbox_send();
 }
 
+// Get a new temperature reading
 void request_temperature_update(){
   make_request("getTemp");
+  // Reset the timer
   s_progress_timer = app_timer_register(1000, request_temperature_update, NULL);
 }
 
@@ -68,8 +71,6 @@ void up_click_handler(ClickRecognizerRef recognizer, void *context) {
 
 /* This is called when the select button is clicked */
 void select_click_handler(ClickRecognizerRef recognizer, void *context) {
-  // text_layer_set_text(hello_layer, "Selected!"); 
-  // request_temperature_update();
   make_request("toggleStandby");
 }
 
@@ -82,8 +83,6 @@ void down_click_handler(ClickRecognizerRef recognizer, void *context) {
 
 /* Menu Functions */
 static void color_menu_select_callback(int index, void *ctx) {
-  // s_first_menu_items[index].subtitle = "You've hit select here!";
-  // layer_mark_dirty(simple_menu_layer_get_layer(s_menu_layer));
   if(index == 0){
     make_request("blue");
   } else if(index == 1){
@@ -95,8 +94,6 @@ static void color_menu_select_callback(int index, void *ctx) {
 }
 
 static void temp_menu_select_callback(int index, void *ctx) {
-  // s_first_menu_items[index].subtitle = "You've hit select here!";
-  // layer_mark_dirty(simple_menu_layer_get_layer(s_menu_layer));
   do_not_disturb = 5;
   if(index == 0){
     make_request("avg");
