@@ -386,9 +386,6 @@ void* get_temp(void* p){
 							string units_temp = temp.substr((right_side + 9), 1);
               
 							
-							cout << "Reading: '" << temperature_raw << "'" << endl;
-							cout << "Units: '" << units_temp << "'" << endl;
-							
 							temperature_raw = extract_number(temperature_raw);
 							if(temp.c_str()[right_side + 10] == 'C' || temp.c_str()[right_side + 10] == 'F'){
 								units_temp = temp.c_str()[right_side + 10];
@@ -404,21 +401,19 @@ void* get_temp(void* p){
                 char* null_term = 0;
                 double raw_temp = strtod(temperature.c_str(), &null_term);
                 
-								cout << "Which is: " << to_string(raw_temp) << endl;
 								
                 if(units == "F"){
-                  raw_temp = ((9.0/5.0) * raw_temp) + 32.0;
+                  raw_temp = (5.0/9.0) * (raw_temp - 32.0);
+									temperatures.push_back(raw_temp);
+								} else if(units == "C"){
+									temperatures.push_back(raw_temp);
                 }
-                // cout << "RawTemp: " << to_string(raw_temp) << endl;
-                temperatures.push_back(raw_temp);
+                
   
                 if(check_temperatures()){
                 	temperatures.erase(temperatures.begin()); 
                 }
                 
-                if(!stand_by){
-                  // cout << "The weather is: '" << temperature << "' in '" << units << "'" << endl;
-                }
               }
               
               
